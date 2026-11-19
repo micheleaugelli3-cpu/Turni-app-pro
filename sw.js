@@ -1,5 +1,6 @@
 const CACHE_NAME = 'turniapp-pro-shell-v2';
 const APP_SHELL = [
+  './icons/apple-touch-icon.png'
   './',
   './index.html',
   './manifest.json',
