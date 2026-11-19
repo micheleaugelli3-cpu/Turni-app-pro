@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TurniApp Pro 6.2</title>
+    
+    <!-- Configurazione PWA -->
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TurniApp Pro">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="description" content="Gestisci turni, cantieri, ore lavorate e buste paga con TurniApp Pro.">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+    <link rel="apple-touch-icon" href="./icons/icon-192.png">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen pb-24">
+
+    <div class="max-w-md mx-auto p-4">
+        
+        <!-- ================= VISTA 1: HOME (SCHERMATA INIZIALE) ================= -->
+        <div id="view-home" class="space-y-4">
+            <!-- Header Home -->
+            <header class="pt-2 pb-2 text-center">
+                <span class="inline-block bg-indigo-50 text-indigo-600 text-xs font-semibold px-3 py-1 rounded-full mb-1">TurniApp Pro v6.2.3</span>
+                <h1 class="text-2xl font-bold text-slate-800">Bentornato! 👋</h1>
+                <p class="text-xs text-slate-500">Panoramica rapida della tua attività lavorativa</p>
+            </header>
+
+            <!-- Filtro Mese Rapido -->
+            <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-600">Mese di Riferimento:</span>
+                <input type="month" id="filterMonthHome" class="bg-slate-50 text-slate-700 text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium" onchange="syncMonth(this.value)">
+            </div>
+
+            <!-- Card Riepilogo Principale -->
+            <div class="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-5 rounded-2xl shadow-md space-y-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-sm font-medium text-indigo-200">Stipendio Stimato</h2>
+                    <span class="text-[10px] bg-indigo-800/80 text-indigo-200 px-2 py-0.5 rounded-full">Aggiornato</span>
+                </div>
+                <div>
+                    <span id="homeTotalEarnings" class="text-3xl font-extrabold tracking-tight">€ 0,00</span>
+                </div>
+                <div class="grid grid-cols-2 gap-3 pt-2 border-t border-indigo-800/60">
+                    <div>
+                        <span class="block text-[10px] text-indigo-300 uppercase tracking-wider">Ore Lavorate</span>
+                        <span id="homeTotalHours" class="text-xl font-bold">0 h</span>
+                    </div>
+                    <div>
+                        <span class="block text-[10px] text-indigo-300 uppercase tracking-wider">Turni Registrati</span>
+                        <span id="homeTotalShifts" class="text-xl font-bold">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dettaglio Tipologie Turno Mese -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Ripartizione Turni</h3>
+                <div class="grid grid-cols-3 gap-2 text-center">
+                    <div class="bg-amber-50 border border-amber-100 p-2.5 rounded-lg">
+                        <span class="block text-[10px] font-semibold text-amber-700">☀️ Giorno</span>
+                        <span id="countGiorno" class="text-base font-bold text-amber-900">0h</span>
+                    </div>
+                    <div class="bg-indigo-50 border border-indigo-100 p-2.5 rounded-lg">
+                        <span class="block text-[10px] font-semibold text-indigo-700">🌙 Notte</span>
+                        <span id="countNotte" class="text-base font-bold text-indigo-900">0h</span>
+                    </div>
+                    <div class="bg-cyan-50 border border-cyan-100 p-2.5 rounded-lg">
+                        <span class="block text-[10px] font-semibold text-cyan-700">🌧️ Pioggia</span>
+                        <span id="countPioggia" class="text-base font-bold text-cyan-900">0h</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assistente AI Turni -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                        🤖 Assistente Turni
+                    </h3>
+                    <span class="text-[10px] bg-indigo-50 text-indigo-600 font-semibold px-2 py-0.5 rounded-full">Locale</span>
+                </div>
+                <div id="aiChatBox" class="bg-slate-50 rounded-lg p-3 h-32 overflow-y-auto text-xs space-y-2 mb-3 border border-slate-100 flex flex-col">
+                    <div class="bg-indigo-50 text-indigo-900 p-2.5 rounded-lg max-w-[85%] self-start leading-relaxed">
+                        Ciao! Posso consultare i dati salvati sul dispositivo e rispondere a domande su turni, guadagni e cantieri. 👇
+                    </div>
+                </div>
+                <!-- Pulsanti Rapidi -->
+                <div class="flex gap-1.5 overflow-x-auto pb-2 mb-2 text-xs scrollbar-none">
+                    <button onclick="askAICommand('riassunto')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg whitespace-nowrap transition">📊 Riassunto Mese</button>
+                    <button onclick="askAICommand('notturni')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg whitespace-nowrap transition">🌙 Bilancio Notturno</button>
+                    <button onclick="askAICommand('cantieri')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg whitespace-nowrap transition">📍 Cantieri</button>
+                    <button onclick="askAICommand('consiglio')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg whitespace-nowrap transition">💡 Consigli</button>
+                </div>
+                <!-- Input Messaggio -->
+                <div class="flex gap-2">
+                    <input type="text" id="aiInput" placeholder="Es. Quanto ho guadagnato?" class="flex-1 px-3 py-2 border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeypress="handleAIKeyPress(event)">
+                    <button onclick="sendAIQuery()" class="bg-indigo-600 text-white px-3.5 py-2 rounded-lg text-xs font-medium hover:bg-indigo-700 transition">Invia</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= VISTA 2: TURNI & CALENDARIO ================= -->
+        <div id="view-calendar" class="space-y-4 hidden">
+            <!-- Header Sezione -->
+            <header class="pt-2 pb-1 text-center">
+                <h1 class="text-xl font-bold text-slate-800">Calendario & Turni</h1>
+                <p class="text-xs text-slate-500">Gestisci e pianifica i tuoi turni di lavoro</p>
+            </header>
+
+            <!-- Selettore Mese Calendario -->
+            <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-600">Visualizza Mese:</span>
+                <input type="month" id="filterMonthCalendar" class="bg-slate-50 text-slate-700 text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium" onchange="syncMonth(this.value)">
+            </div>
+
+            <!-- Calendario Visivo Mensile -->
+            <section class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <h2 class="text-sm font-semibold mb-3 text-slate-700">Griglia Mensile</h2>
+                <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-slate-400 mb-2">
+                    <span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span><span>Ven</span><span>Sab</span><span>Dom</span>
+                </div>
+                <div id="calendarGrid" class="grid grid-cols-7 gap-1 text-center">
+                    <!-- Dinamico -->
+                </div>
+            </section>
+
+            <!-- Form Inserimento Turno -->
+            <section class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <h2 class="text-base font-semibold mb-3 text-slate-700">Aggiungi Turno</h2>
+                <form id="shiftForm" onsubmit="addShift(event)" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Data</label>
+                        <input type="date" id="shiftDate" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Tipo Turno</label>
+                            <select id="shiftType" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                                <option value="Giorno">☀️ Giorno</option>
+                                <option value="Notte">🌙 Notte</option>
+                                <option value="Pioggia">🌧️ Pioggia</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-500 mb-1">Ore Lavorate</label>
+                            <input type="number" id="shiftHours" step="0.5" min="0.5" max="24" value="8" required class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Cantiere / Luogo</label>
+                        <input type="text" id="shiftCantiere" placeholder="Es. Cantiere Gardolo, Stazione..." class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Note (facoltativo)</label>
+                        <input type="text" id="shiftNotes" placeholder="Es. Straordinario, cambio turno..." class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="submit" id="saveShiftBtn" class="flex-1 bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition active:scale-95">Salva Turno</button>
+                        <button type="button" id="cancelEditBtn" onclick="cancelEdit()" class="hidden px-4 bg-slate-100 text-slate-700 py-2.5 rounded-lg text-sm font-medium">Annulla</button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Lista Turni -->
+            <section class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <h2 class="text-base font-semibold mb-3 text-slate-700">Turni Registrati nel Mese</h2>
+                <div id="shiftsList" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    <!-- Dinamico -->
+                </div>
+            </section>
+        </div>
+
+        <!-- ================= VISTA 3: STATISTICHE ================= -->
+        <div id="view-stats" class="space-y-4 hidden">
+            <header class="pt-2 text-center"><h1 class="text-xl font-bold">Statistiche & Obiettivi</h1><p class="text-xs text-slate-500">Andamento mensile e annuale</p></header>
+            <section class="bg-white p-4 rounded-xl border space-y-3">
+                <div class="flex items-center justify-between"><h2 class="font-semibold text-sm">Obiettivo mensile</h2><span id="goalLabel" class="text-xs text-indigo-700 font-bold">€ 0</span></div>
+                <div class="flex gap-2"><input id="monthlyGoal" type="number" min="0" step="50" placeholder="Obiettivo €" class="min-w-0 flex-1 border rounded-lg p-2 text-sm"><button onclick="saveGoal()" class="bg-indigo-600 text-white rounded-lg px-3 text-xs">Salva</button></div>
+                <div class="h-3 bg-slate-100 rounded-full overflow-hidden"><div id="goalProgress" class="h-full bg-indigo-600 rounded-full" style="width:0%"></div></div>
+                <p id="goalText" class="text-xs text-slate-500">Imposta un obiettivo per monitorare i progressi.</p>
+            </section>
+            <section class="bg-white p-4 rounded-xl border space-y-3">
+                <div class="flex items-center justify-between"><h2 class="font-semibold text-sm">Riepilogo annuale</h2><select id="statsYear" onchange="renderStats()" class="border rounded-lg p-1 text-sm"></select></div>
+                <div class="grid grid-cols-2 gap-2"><div class="bg-indigo-50 rounded-lg p-3"><p class="text-xs text-slate-500">Guadagno stimato</p><b id="yearEarnings" class="text-lg">€ 0</b></div><div class="bg-slate-50 rounded-lg p-3"><p class="text-xs text-slate-500">Ore lavorate</p><b id="yearHours" class="text-lg">0 h</b></div></div>
+                <h3 class="text-xs font-semibold text-slate-600">Guadagni per mese</h3><div id="yearChart" class="space-y-2"></div>
+                <div id="typeStats" class="text-xs text-slate-600 space-y-1"></div>
+            </section>
+
+            <section id="payComparison" class="bg-white p-4 rounded-xl border space-y-3">
+                <div><h2 class="font-semibold text-sm">⚖️ Confronto turni e busta paga</h2>
+                <p class="text-xs text-slate-500 mt-1">Confronta le ore registrate con quelle indicate nel cedolino e consulta il netto pagato.</p></div>
+                <label class="block text-xs text-slate-600">Mese da confrontare
+                    <select id="comparisonMonth" onchange="renderPayComparison()" class="mt-1 w-full border rounded-lg p-2 text-sm"></select>
+                </label>
+                <div id="comparisonSummary" class="grid grid-cols-2 gap-2 text-sm"></div>
+                <div id="comparisonWarnings" class="text-xs space-y-1"></div>
+                <button onclick="printComparisonReport()" class="w-full bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-semibold">📄 Genera report confronto PDF</button>
+                <p class="text-[10px] text-slate-400">La stima dei turni non equivale al netto in busta paga. Verifica sempre le ore lette automaticamente dal cedolino.</p>
+            </section>
+
+            <section class="bg-white p-4 rounded-xl border space-y-2"><h2 class="font-semibold text-sm">Report del mese</h2><p class="text-xs text-slate-500">Stampa o salva come PDF dal menu di condivisione/stampa di Android.</p><button onclick="printMonthlyReport()" class="w-full bg-indigo-600 text-white rounded-lg py-2.5 text-sm">📄 Genera report PDF</button></section>
+            <section class="bg-white p-4 rounded-xl border space-y-3">
+                <div><h2 class="font-semibold text-sm">🧾 Lettura automatica buste paga</h2><p class="text-xs text-slate-500 mt-1">Carica un PDF o una foto. L'app prova a leggere importi, contributi, IRPEF, ore e maggiorazioni. Controlla sempre i dati prima di salvarli.</p></div>
+                <input id="payslipInput" type="file" accept="application/pdf,image/*" class="w-full text-xs border rounded-lg p-2" onchange="readPayslip(this.files[0])">
+                <p id="payslipStatus" class="text-xs text-slate-500" aria-live="polite">PDF testuali, PDF scannerizzati e immagini JPG/PNG supportati. La lettura richiede connessione per caricare i motori PDF/OCR.</p>
+                <div id="payslipReview" class="hidden space-y-2">
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="text-xs text-slate-600">Mese<input id="psMonth" type="month" class="mt-1 w-full border rounded p-2 text-sm"></label>
+                        <label class="text-xs text-slate-600">Netto pagato (€)<input id="psNet" type="number" step="0.01" class="mt-1 w-full border rounded p-2 text-sm"></label>
+                        <label class="text-xs text-slate-600">Totale competenze (€)<input id="psGross" type="number" step="0.01" class="mt-1 w-full border rounded p-2 text-sm"></label>
+                        <label class="text-xs text-slate-600">Totale trattenute (€)<input id="psDeduct" type="number" step="0.01" class="mt-1 w-full border rounded p-2 text-sm"></label>
+                        <label class="text-xs text-slate-600">Imponibile IRPEF (€)<input id="psTaxable" type="number" step="0.01" class="mt-1 w-full border rounded p-2 text-sm"></label>
+                        <label class="text-xs text-slate-600">IRPEF netta (€)<input id="psIrpef" type="number" step="0.01" class="mt-1 w-full border rounded p-2 text-sm"></label>
+                        <label class="text-xs text-slate-600">Contributi totali (€)<input id="psContrib" type="number" step="0.01" class="mt-1 w-full border rounded p-2 text-sm"></label>
+                        <label class="text-xs text-slate-600">Ore ordinarie<input id="psOrdinary" type="number" step="0.01" class="mt-1 w-full border rounded p-2 text-sm"></label>
+                        <label class="text-xs text-slate-600">Ore notturne<input id="psNight" type="number" step="0.01" class="mt-1 w-full border rounded p-2 text-sm"></label>
+                        <label class="text-xs text-slate-600">Maggiorazioni (totale €)<input id="psPremium" type="number" step="0.01" class="mt-1 w-full border rounded p-2 text-sm"></label>
+                    </div>
+                    <label class="block text-xs text-slate-600">Dettaglio riconosciuto / note<textarea id="psNotes" rows="4" class="mt-1 w-full border rounded p-2 text-xs"></textarea></label>
+                    <button onclick="savePayslip()" class="w-full bg-indigo-600 text-white rounded-lg py-2.5 text-sm font-semibold">Salva busta paga verificata</button>
+                </div>
+                <div><h3 class="font-semibold text-xs">Storico buste paga</h3><div id="payslipList" class="space-y-2 text-xs mt-2"></div></div>
+                <p class="text-[10px] text-slate-400">I dati estratti restano sul dispositivo. L'OCR può sbagliare cifre o associare male una voce: verifica il cedolino originale. Non è una consulenza fiscale.</p>
+            </section>
+        </div>
+
+        <!-- ================= VISTA 3: IMPOSTAZIONI & DOWNLOAD ================= -->
+        <div id="view-settings" class="space-y-4 hidden">
+            <!-- Header Sezione -->
+            <header class="pt-2 pb-1 text-center">
+                <h1 class="text-xl font-bold text-slate-800">Impostazioni & App</h1>
+                <p class="text-xs text-slate-500">TurniApp Pro 6.2 · Tariffe, pianificazione, documenti e backup</p>
+            </header>
+
+            <!-- Sezione Download & Installazione App -->
+            <section class="bg-gradient-to-br from-indigo-50 to-slate-50 p-4 rounded-xl shadow-sm border border-indigo-100 space-y-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">📱</span>
+                    <div>
+                        <h2 class="text-sm font-bold text-indigo-900">Scarica l'App sul Telefono</h2>
+                        <p class="text-[11px] text-slate-600">Installa TurniApp Pro per averla sempre a portata di mano nella schermata home.</p>
+                    </div>
+                </div>
+
+                <!-- Pulsante Installazione Automatica (Android / Chrome / Desktop) -->
+                <button id="installBtn" onclick="installApp()" class="hidden w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 px-3 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-sm">
+                    ⚡ Installa Subito con 1 Click
+                </button>
+
+                <!-- Guida Manuale per Dispositivi (Sempre visibile per chiarezza) -->
+                <div class="bg-white p-3 rounded-lg border border-slate-200 text-xs space-y-2">
+                    <p class="font-semibold text-slate-700">Non vedi il pulsante sopra? Segui questi semplici passi:</p>
+                    <div class="space-y-1.5 text-[11px] text-slate-600">
+                        <p>🍏 <b>Su iPhone (Safari):</b> Tocca il tasto <b>Condividi</b> ⎋ in basso e seleziona <span class="font-medium text-indigo-700">"Aggiungi a Home"</span>.</p>
+                        <p>🤖 <b>Su Android (Chrome):</b> Tocca i tre puntini <b>⋮</b> in alto a destra e seleziona <span class="font-medium text-indigo-700">"Installa app"</span> o <span class="font-medium text-indigo-700">"Aggiungi a schermata Home"</span>.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Impostazioni Tariffe -->
+            <section class="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+                <h2 class="text-base font-semibold mb-1 text-slate-700">Tariffe Orarie (€/h)</h2>
+                <p class="text-[11px] text-slate-500 mb-3">Calcolo senza straordinari: ogni ora viene conteggiata alla tariffa del relativo turno.</p>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-[10px] font-medium text-slate-500 mb-1">Giorno</label>
+                        <input type="number" id="hourlyRate" step="0.5" value="12" class="w-full px-2 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-semibold" onchange="updateSettings()">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-medium text-slate-500 mb-1">Notte</label>
+                        <input type="number" id="nightHourlyRate" step="0.5" value="15" class="w-full px-2 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-semibold" onchange="updateSettings()">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-medium text-slate-500 mb-1">Pioggia</label>
+                        <input type="number" id="rainHourlyRate" step="0.5" value="14" class="w-full px-2 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-semibold" onchange="updateSettings()">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Backup & Esportazione -->
+            <section class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 space-y-3">
+                <h2 class="text-base font-semibold text-slate-700">Gestione Dati & Export</h2>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="exportCSV()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 px-3 rounded-lg text-xs font-medium transition flex items-center justify-center gap-1">
+                        📊 Esporta CSV
+                    </button>
+                    <button onclick="exportJSON()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 px-3 rounded-lg text-xs font-medium transition flex items-center justify-center gap-1">
+                        💾 Salva Backup
+                    </button>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Ripristina da Backup (.json)</label>
+                    <input type="file" id="importFile" accept=".json" onchange="importJSON(event)" class="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                </div>
+            </section>
+            <section class="bg-white p-4 rounded-xl border space-y-3">
+                <h2 class="font-semibold text-sm">Pianificazione e promemoria</h2>
+                <div class="grid grid-cols-2 gap-2"><input id="planDate" type="date" class="border rounded-lg p-2 text-sm"><select id="planType" class="border rounded-lg p-2 text-sm"><option>Giorno</option><option>Notte</option><option>Pioggia</option></select></div>
+                <input id="planNote" placeholder="Luogo o nota (facoltativo)" class="w-full border rounded-lg p-2 text-sm">
+                <button onclick="savePlannedShift()" class="w-full bg-indigo-600 text-white rounded-lg py-2 text-sm">Aggiungi turno pianificato</button><div id="plannedList" class="space-y-2 text-xs"></div>
+                <div class="flex gap-2"><button onclick="requestNotifications()" class="flex-1 bg-amber-50 text-amber-800 rounded-lg p-2 text-xs">🔔 Attiva notifiche</button><button onclick="notifyUpcoming()" class="flex-1 bg-slate-100 rounded-lg p-2 text-xs">Verifica promemoria</button></div>
+                <p class="text-[10px] text-slate-400">Le notifiche richiedono il permesso del browser e funzionano quando l'app è aperta; per notifiche affidabili a telefono bloccato serve una versione installata con servizio push.</p>
+            </section>
+            <section class="bg-white p-4 rounded-xl border space-y-2">
+                <h2 class="font-semibold text-sm">Documenti personali</h2><p class="text-xs text-slate-500">Aggiungi buste paga o documenti. Restano salvati sul dispositivo in questo browser.</p>
+                <input id="docInput" type="file" accept="image/*,.pdf" class="w-full text-xs">
+                <button onclick="saveDocument()" class="w-full bg-slate-100 rounded-lg p-2 text-xs">Salva documento</button><div id="documentList" class="space-y-2 text-xs"></div>
+            </section>
+            <section class="bg-white p-4 rounded-xl border space-y-2">
+                <h2 class="font-semibold text-sm">Backup automatico</h2><p class="text-xs text-slate-500">I dati vengono salvati automaticamente nella memoria del browser ad ogni modifica. Esporta periodicamente un backup JSON per non perderli se cambi telefono o browser.</p>
+                <button onclick="exportJSON()" class="w-full bg-indigo-50 text-indigo-700 rounded-lg p-2 text-xs font-semibold">Esporta backup completo</button>
+            </section>
+        </div>
+
+    </div>
+
+    <!-- ================= BARRA DI NAVIGAZIONE INFERIORE ================= -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-slate-200 px-2 py-2 flex justify-around items-center z-50 shadow-lg">
+        <button onclick="switchTab('home')" id="nav-btn-home" class="flex flex-col items-center text-indigo-600"><span class="text-xl">🏠</span><span class="text-[10px] font-semibold">Home</span></button>
+        <button onclick="switchTab('calendar')" id="nav-btn-calendar" class="flex flex-col items-center text-slate-400"><span class="text-xl">📅</span><span class="text-[10px] font-semibold">Turni</span></button>
+        <button onclick="switchTab('stats')" id="nav-btn-stats" class="flex flex-col items-center text-slate-400"><span class="text-xl">📊</span><span class="text-[10px] font-semibold">Statistiche</span></button>
+        <button onclick="switchTab('settings')" id="nav-btn-settings" class="flex flex-col items-center text-slate-400"><span class="text-xl">⚙️</span><span class="text-[10px] font-semibold">Altro</span></button>
+    </nav>
+
+    <script>
+        // Gestione Installazione PWA (Chrome / Android)
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const installBtn = document.getElementById('installBtn');
+            if (installBtn) {
+                installBtn.classList.remove('hidden');
+            }
+        });
+
+        function installApp() {
+            if (!deferredPrompt) {
+                alert("L'installazione automatica è già attiva o non supportata da questo browser. Usa le istruzioni manuali qui sotto!");
+                return;
+            }
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    console.log('Utente ha accettato l installazione');
+                }
+                deferredPrompt = null;
+                document.getElementById('installBtn').classList.add('hidden');
+            });
+        }
+
+        // Il Service Worker deve essere un file separato servito via HTTPS.
+        // La registrazione da Blob non è supportata in modo affidabile dai browser.
+
+        let shifts = [];
+        try {
+            const savedShifts = JSON.parse(localStorage.getItem('shifts') || '[]');
+            shifts = Array.isArray(savedShifts) ? savedShifts : [];
+        } catch (e) {
+            shifts = [];
+        }
+        let hourlyRate = parseFloat(localStorage.getItem('hourlyRate')) || 12.0;
+        let nightHourlyRate = parseFloat(localStorage.getItem('nightHourlyRate')) || 15.0;
+        let rainHourlyRate = parseFloat(localStorage.getItem('rainHourlyRate')) || 14.0;
+        let editingShiftId = null;
+
+        document.getElementById('hourlyRate').value = hourlyRate;
+        document.getElementById('nightHourlyRate').value = nightHourlyRate;
+        document.getElementById('rainHourlyRate').value = rainHourlyRate;
+        
+        const now = new Date();
+        const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        
+        document.getElementById('filterMonthHome').value = currentMonthStr;
+        document.getElementById('filterMonthCalendar').value = currentMonthStr;
+        document.getElementById('shiftDate').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+        function getRate(type) {
+            if (type === 'Giorno') return hourlyRate;
+            if (type === 'Notte') return nightHourlyRate;
+            return rainHourlyRate;
+        }
+
+        function syncMonth(monthValue) {
+            document.getElementById('filterMonthHome').value = monthValue;
+            document.getElementById('filterMonthCalendar').value = monthValue;
+            renderApp();
+        }
+
+        function switchTab(tabId) {
+            ['home', 'calendar', 'settings'].forEach(t => {
+                document.getElementById(`view-${t}`).classList.add('hidden');
+                const btn = document.getElementById(`nav-btn-${t}`);
+                btn.className = "flex flex-col items-center text-slate-400 hover:text-slate-600 transition";
+            });
+            document.getElementById(`view-${tabId}`).classList.remove('hidden');
+            document.getElementById(`nav-btn-${tabId}`).className = "flex flex-col items-center text-indigo-600 transition";
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function updateSettings() {
+            hourlyRate = parseFloat(document.getElementById('hourlyRate').value) || 0;
+            nightHourlyRate = parseFloat(document.getElementById('nightHourlyRate').value) || 0;
+            rainHourlyRate = parseFloat(document.getElementById('rainHourlyRate').value) || 0;
+            
+            localStorage.setItem('hourlyRate', hourlyRate);
+            localStorage.setItem('nightHourlyRate', nightHourlyRate);
+            localStorage.setItem('rainHourlyRate', rainHourlyRate);
+            renderApp();
+        }
+
+        // Protegge i testi inseriti dall'utente quando vengono mostrati nella pagina.
+        function escapeHTML(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[ch]);
+        }
+
+        function editShift(id) {
+            const shift = shifts.find(s => s.id === id);
+            if (!shift) return;
+            editingShiftId = id;
+            document.getElementById('shiftDate').value = shift.date;
+            document.getElementById('shiftType').value = shift.type;
+            document.getElementById('shiftHours').value = shift.hours;
+            document.getElementById('shiftCantiere').value = shift.cantiere || '';
+            document.getElementById('shiftNotes').value = shift.notes || '';
+            document.getElementById('saveShiftBtn').textContent = 'Aggiorna Turno';
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+            switchTab('calendar');
+            document.getElementById('shiftForm').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            editingShiftId = null;
+            document.getElementById('shiftForm').reset();
+            document.getElementById('shiftDate').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            document.getElementById('shiftHours').value = 8;
+            document.getElementById('saveShiftBtn').textContent = 'Salva Turno';
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+        }
+
+        function addShift(e) {
+            e.preventDefault();
+            const date = document.getElementById('shiftDate').value;
+            const type = document.getElementById('shiftType').value;
+            const hours = parseFloat(document.getElementById('shiftHours').value);
+            const cantiere = document.getElementById('shiftCantiere').value.trim();
+            const notes = document.getElementById('shiftNotes').value.trim();
+
+            if (!date || !Number.isFinite(hours) || hours <= 0 || hours > 24) {
+                alert('Controlla la data e inserisci un numero di ore valido (massimo 24).');
+                return;
+            }
+            if (editingShiftId !== null) {
+                const index = shifts.findIndex(s => s.id === editingShiftId);
+                if (index !== -1) shifts[index] = { ...shifts[index], date, type, hours, cantiere, notes };
+                editingShiftId = null;
+                document.getElementById('saveShiftBtn').textContent = 'Salva Turno';
+                document.getElementById('cancelEditBtn').classList.add('hidden');
+            } else {
+                shifts.push({ id: Date.now(), date, type, hours, cantiere, notes });
+            }
+            document.getElementById('shiftNotes').value = '';
+            document.getElementById('shiftCantiere').value = '';
+            saveAndRender();
+        }
+
+        function deleteShift(id) {
+            if (!confirm('Vuoi eliminare questo turno?')) return;
+            shifts = shifts.filter(s => s.id !== id);
+            if (editingShiftId === id) cancelEdit();
+            saveAndRender();
+        }
+
+        function saveAndRender() {
+            localStorage.setItem('shifts', JSON.stringify(shifts));
+            renderApp();
+        }
+
+        function renderApp() {
+            const selectedMonth = document.getElementById('filterMonthHome').value;
+            const listContainer = document.getElementById('shiftsList');
+            listContainer.innerHTML = '';
+
+            const filteredShifts = shifts.filter(s => s.date.startsWith(selectedMonth));
+            filteredShifts.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            let totalH = 0;
+            let totalEarnings = 0;
+            let countG = 0, countN = 0, countR = 0;
+
+            if (filteredShifts.length === 0) {
+                listContainer.innerHTML = '<p class="text-sm text-slate-400 text-center py-4">Nessun turno registrato in questo mese.</p>';
+            } else {
+                filteredShifts.forEach(shift => {
+                    totalH += shift.hours;
+                    const rate = getRate(shift.type);
+                    totalEarnings += shift.hours * rate;
+
+                    if (shift.type === 'Giorno') countG += shift.hours;
+                    else if (shift.type === 'Notte') countN += shift.hours;
+                    else if (shift.type === 'Pioggia') countR += shift.hours;
+
+                    let badgeColor, icon;
+                    if (shift.type === 'Giorno') {
+                        badgeColor = 'bg-amber-100 text-amber-800';
+                        icon = '☀️';
+                    } else if (shift.type === 'Notte') {
+                        badgeColor = 'bg-indigo-100 text-indigo-800';
+                        icon = '🌙';
+                    } else {
+                        badgeColor = 'bg-cyan-100 text-cyan-800';
+                        icon = '🌧️';
+                    }
+
+                    const cantiereHtml = shift.cantiere ? `<p class="text-xs text-indigo-600 font-medium mt-1">📍 ${escapeHTML(shift.cantiere)}</p>` : '';
+                    const notesHtml = shift.notes ? `<p class="text-xs text-slate-500 mt-0.5 italic">📝 ${escapeHTML(shift.notes)}</p>` : '';
+
+                    const item = document.createElement('div');
+                    item.className = 'flex items-start justify-between p-3 bg-slate-50 rounded-lg border border-slate-100 text-sm';
+                    item.innerHTML = `
+                        <div class="flex-1 pr-2">
+                            <span class="font-medium text-slate-700">${escapeHTML(formatDate(shift.date))}</span>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${badgeColor}">${icon} ${shift.type}</span>
+                                <span class="text-slate-500">${shift.hours} ore (€${rate}/h)</span>
+                            </div>
+                            ${cantiereHtml}
+                            ${notesHtml}
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <button onclick="editShift(${shift.id})" class="text-indigo-600 hover:text-indigo-800 p-1 text-xs font-medium">Modifica</button>
+                            <button onclick="deleteShift(${shift.id})" class="text-rose-400 hover:text-rose-600 p-1 text-xs font-medium">Elimina</button>
+                        </div>
+                    `;
+                    listContainer.appendChild(item);
+                });
+            }
+
+            document.getElementById('homeTotalHours').innerText = totalH + ' h';
+            document.getElementById('homeTotalEarnings').innerText = '€ ' + totalEarnings.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('homeTotalShifts').innerText = filteredShifts.length;
+
+            document.getElementById('countGiorno').innerText = countG + 'h';
+            document.getElementById('countNotte').innerText = countN + 'h';
+            document.getElementById('countPioggia').innerText = countR + 'h';
+
+            renderCalendar(selectedMonth);
+        }
+
+        function renderCalendar(selectedMonth) {
+            const calendarGrid = document.getElementById('calendarGrid');
+            calendarGrid.innerHTML = '';
+
+            const [year, month] = selectedMonth.split('-').map(Number);
+            const firstDay = new Date(year, month - 1, 1);
+            let startingDay = firstDay.getDay();
+            startingDay = startingDay === 0 ? 6 : startingDay - 1;
+
+            const totalDays = new Date(year, month, 0).getDate();
+            const shiftMap = {};
+            shifts.forEach(s => {
+                if (s.date.startsWith(selectedMonth)) {
+                    if (!shiftMap[s.date]) shiftMap[s.date] = [];
+                    shiftMap[s.date].push(s);
+                }
+            });
+
+            for (let i = 0; i < startingDay; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'h-11';
+                calendarGrid.appendChild(emptyCell);
+            }
+
+            for (let day = 1; day <= totalDays; day++) {
+                const dayStr = String(day).padStart(2, '0');
+                const monthStr = String(month).padStart(2, '0');
+                const dateKey = `${year}-${monthStr}-${dayStr}`;
+                
+                const dayShifts = shiftMap[dateKey] || [];
+                const shift = dayShifts[0];
+                const cell = document.createElement('div');
+                let baseClasses = "h-11 flex flex-col items-center justify-center rounded-lg text-xs font-medium cursor-pointer transition border ";
+                
+                if (shift) {
+                    const hasDetail = dayShifts.some(s => s.cantiere || s.notes) ? ' <span class="text-[8px]" title="Dettagli presenti">📌</span>' : '';
+                    const extraCount = dayShifts.length > 1 ? ` +${dayShifts.length - 1}` : '';
+                    if (shift.type === 'Giorno') {
+                        cell.className = baseClasses + "bg-amber-50 border-amber-200 text-amber-900 hover:bg-amber-100 shadow-sm";
+                        cell.innerHTML = `<span class="font-bold">${day}</span><span class="text-[9px] text-amber-700">☀️ ${dayShifts.reduce((sum, s) => sum + Number(s.hours || 0), 0)}h${extraCount}${hasDetail}</span>`;
+                    } else if (shift.type === 'Notte') {
+                        cell.className = baseClasses + "bg-indigo-50 border-indigo-200 text-indigo-900 hover:bg-indigo-100 shadow-sm";
+                        cell.innerHTML = `<span class="font-bold">${day}</span><span class="text-[9px] text-indigo-700">🌙 ${dayShifts.reduce((sum, s) => sum + Number(s.hours || 0), 0)}h${extraCount}${hasDetail}</span>`;
+                    } else {
+                        cell.className = baseClasses + "bg-cyan-50 border-cyan-200 text-cyan-900 hover:bg-cyan-100 shadow-sm";
+                        cell.innerHTML = `<span class="font-bold">${day}</span><span class="text-[9px] text-cyan-700">🌧️ ${dayShifts.reduce((sum, s) => sum + Number(s.hours || 0), 0)}h${extraCount}${hasDetail}</span>`;
+                    }
+                } else {
+                    cell.className = baseClasses + "bg-slate-50 border-slate-100 text-slate-600 hover:bg-slate-100";
+                    cell.innerHTML = `<span class="font-semibold">${day}</span>`;
+                }
+
+                cell.onclick = () => {
+                    document.getElementById('shiftDate').value = dateKey;
+                    switchTab('calendar');
+                    document.getElementById('shiftForm').scrollIntoView({ behavior: 'smooth' });
+                };
+
+                calendarGrid.appendChild(cell);
+            }
+        }
+
+        function formatDate(dateString) {
+            const options = { weekday: 'short', day: 'numeric', month: 'short' };
+            return new Date(dateString + 'T00:00:00').toLocaleDateString('it-IT', options);
+        }
+
+        // --- Logica Assistente AI ---
+        function handleAIKeyPress(e) {
+            if (e.key === 'Enter') {
+                sendAIQuery();
+            }
+        }
+
+        function addAIMessage(text, sender = 'ai') {
+            const chatBox = document.getElementById('aiChatBox');
+            const msgDiv = document.createElement('div');
+            
+            if (sender === 'user') {
+                msgDiv.className = 'bg-indigo-600 text-white p-2.5 rounded-lg max-w-[85%] self-end ml-auto leading-relaxed';
+            } else {
+                msgDiv.className = 'bg-indigo-50 text-indigo-900 p-2.5 rounded-lg max-w-[85%] self-start leading-relaxed';
+            }
+            msgDiv.innerText = text;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function askAICommand(command) {
+            const selectedMonth = document.getElementById('filterMonthHome').value;
+            const filteredShifts = shifts.filter(s => s.date.startsWith(selectedMonth));
+
+            if (command === 'riassunto') {
+                addAIMessage("📊 Dammi un riassunto del mese.", 'user');
+                if (filteredShifts.length === 0) {
+                    setTimeout(() => addAIMessage("Nel mese selezionato non ci sono turni registrati."), 400);
+                } else {
+                    let totalH = filteredShifts.reduce((acc, s) => acc + s.hours, 0);
+                    let totalE = filteredShifts.reduce((acc, s) => acc + (s.hours * getRate(s.type)), 0);
+                    setTimeout(() => addAIMessage(`Per il mese di ${selectedMonth} hai registrato ${filteredShifts.length} turni, per un totale di ${totalH} ore e un guadagno stimato di € ${totalE.toLocaleString('it-IT', {minimumFractionDigits: 2})}.`), 400);
+                }
+            } else if (command === 'notturni') {
+                addAIMessage("🌙 Qual è il bilancio dei turni notturni?", 'user');
+                const nightShifts = filteredShifts.filter(s => s.type === 'Notte');
+                let nightH = nightShifts.reduce((acc, s) => acc + s.hours, 0);
+                let nightE = nightH * nightHourlyRate;
+                setTimeout(() => addAIMessage(`Hai fatto ${nightShifts.length} turni di notte questo mese, per un totale di ${nightH} ore e un compenso notturno di € ${nightE.toLocaleString('it-IT', {minimumFractionDigits: 2})} (tariffa: €${nightHourlyRate}/h).`), 400);
+            } else if (command === 'cantieri') {
+                addAIMessage("📍 Mostrami i cantieri del mese.", 'user');
+                const cantieriList = [...new Set(filteredShifts.map(s => s.cantiere).filter(Boolean))];
+                if (cantieriList.length === 0) {
+                    setTimeout(() => addAIMessage("Nessun cantiere specificato nei turni di questo mese."), 400);
+                } else {
+                    let report = "Cantieri registrati:\n" + cantieriList.map(c => {
+                        let cShifts = filteredShifts.filter(s => s.cantiere === c);
+                        let cH = cShifts.reduce((acc, s) => acc + s.hours, 0);
+                        return `- ${c}: ${cShifts.length} turni (${cH} ore)`;
+                    }).join('\n');
+                    setTimeout(() => addAIMessage(report), 400);
+                }
+            } else if (command === 'consiglio') {
+                addAIMessage("💡 Dammi un consiglio sui turni.", 'user');
+                setTimeout(() => {
+                    let totalH = filteredShifts.reduce((acc, s) => acc + s.hours, 0);
+                    if (totalH > 160) {
+                        addAIMessage("⚠️ Hai superato le 160 ore questo mese! Ricordati di riposare adeguatamente.");
+                    } else if (totalH === 0) {
+                        addAIMessage("📅 Il mese è ancora vuoto! Inizia ad aggiungere i tuoi turni nella sezione Turni.");
+                    } else {
+                        addAIMessage("👍 Il tuo carico di ore sembra equilibrato. Continua così!");
+                    }
+                }, 400);
+            }
+        }
+
+        function sendAIQuery() {
+            const input = document.getElementById('aiInput');
+            const query = input.value.trim();
+            if (!query) return;
+
+            addAIMessage(query, 'user');
+            input.value = '';
+
+            const selectedMonth = document.getElementById('filterMonthHome').value;
+            const filteredShifts = shifts.filter(s => s.date.startsWith(selectedMonth));
+            const qLower = query.toLowerCase();
+
+            setTimeout(() => {
+                if (qLower.includes('guadagno') || qLower.includes('soldi') || qLower.includes('euro') || qLower.includes('stipendio')) {
+                    let totalE = filteredShifts.reduce((acc, s) => acc + (s.hours * getRate(s.type)), 0);
+                    addAIMessage(`Il guadagno stimato per il mese selezionato è di € ${totalE.toLocaleString('it-IT', {minimumFractionDigits: 2})}.`);
+                } else if (qLower.includes('cantiere') || qLower.includes('cantieri')) {
+                    const cantieriList = [...new Set(filteredShifts.map(s => s.cantiere).filter(Boolean))];
+                    if (cantieriList.length === 0) {
+                        addAIMessage("Non ci sono cantieri specificati questo mese.");
+                    } else {
+                        addAIMessage(`I cantieri attivi questo mese sono: ${cantieriList.join(', ')}.`);
+                    }
+                } else if (qLower.includes('ore') || qLower.includes('quante')) {
+                    let totalH = filteredShifts.reduce((acc, s) => acc + s.hours, 0);
+                    addAIMessage(`Hai totalizzato ${totalH} ore questo mese.`);
+                } else {
+                    addAIMessage("Ho analizzato la tua richiesta. Puoi chiedermi informazioni sui 'cantieri', sulle 'ore' o sul 'guadagno', oppure usare i pulsanti rapidi!");
+                }
+            }, 400);
+        }
+
+        // --- Funzioni Export e Backup ---
+        function exportCSV() {
+            const selectedMonth = document.getElementById('filterMonthHome').value;
+            const filteredShifts = shifts.filter(s => s.date.startsWith(selectedMonth));
+            if (filteredShifts.length === 0) {
+                alert('Nessun turno da esportare per il mese selezionato.');
+                return;
+            }
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFFData,Tipo,Ore,Cantiere,TariffaOraria,Compenso,Note\r\n";
+            filteredShifts.forEach(shift => {
+                const rate = getRate(shift.type);
+                const compenso = shift.hours * rate;
+                const csvCell = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
+                csvContent += [shift.date, shift.type, shift.hours, shift.cantiere || '', rate, compenso, shift.notes || ''].map(csvCell).join(',') + "\r\n";
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `turni_${selectedMonth}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function exportJSON() {
+            const data = {
+                shifts: shifts,
+                hourlyRate: hourlyRate,
+                nightHourlyRate: nightHourlyRate,
+                rainHourlyRate: rainHourlyRate,
+                plannedShifts: loadArray('plannedShifts'),
+                savedDocuments: loadArray('savedDocuments'),
+                savedPayslips: loadArray('savedPayslips'),
+                monthlyGoal: Number(localStorage.getItem('monthlyGoal') || 0)
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `turniapp_backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importJSON(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported.shifts && Array.isArray(imported.shifts) &&
+                        imported.shifts.every(s => s && typeof s.date === 'string' &&
+                            ['Giorno', 'Notte', 'Pioggia'].includes(s.type) &&
+                            Number.isFinite(Number(s.hours)) && Number(s.hours) > 0 && Number(s.hours) <= 24)) {
+                        shifts = imported.shifts.map(s => ({ ...s, id: Number(s.id) || Date.now() + Math.random(), hours: Number(s.hours) }));
+                        if (imported.hourlyRate !== undefined) {
+                            hourlyRate = parseFloat(imported.hourlyRate);
+                            document.getElementById('hourlyRate').value = hourlyRate;
+                            localStorage.setItem('hourlyRate', hourlyRate);
+                        }
+                        if (imported.nightHourlyRate !== undefined) {
+                            nightHourlyRate = parseFloat(imported.nightHourlyRate);
+                            document.getElementById('nightHourlyRate').value = nightHourlyRate;
+                            localStorage.setItem('nightHourlyRate', nightHourlyRate);
+                        }
+                        if (imported.rainHourlyRate !== undefined) {
+                            rainHourlyRate = parseFloat(imported.rainHourlyRate);
+                            document.getElementById('rainHourlyRate').value = rainHourlyRate;
+                            localStorage.setItem('rainHourlyRate', rainHourlyRate);
+                        }
+                        if (Array.isArray(imported.plannedShifts)) { plannedShifts = imported.plannedShifts; localStorage.setItem('plannedShifts', JSON.stringify(plannedShifts)); }
+                        if (Array.isArray(imported.savedDocuments)) { savedDocuments = imported.savedDocuments; localStorage.setItem('savedDocuments', JSON.stringify(savedDocuments)); }
+                        if (Array.isArray(imported.savedPayslips)) { localStorage.setItem('savedPayslips', JSON.stringify(imported.savedPayslips)); }
+                        if (Number.isFinite(Number(imported.monthlyGoal))) { monthlyGoal = Number(imported.monthlyGoal); localStorage.setItem('monthlyGoal', monthlyGoal); }
+                        saveAndRender();
+                        if (typeof renderPlanned === 'function') renderPlanned();
+                        if (typeof renderDocuments === 'function') renderDocuments();
+                        alert('Backup ripristinato con successo!');
+                    } else {
+                        alert('Il file di backup non è valido.');
+                    }
+                } catch (err) {
+                    alert('Errore durante la lettura del file JSON.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Avvio completo gestito in fondo allo script.
+    </script>
+
+    <script>
+    // TurniApp Pro 6.0 - moduli aggiuntivi, compatibili con i dati della 5.0
+    const loadArray = (key) => { try { const v=JSON.parse(localStorage.getItem(key)||'[]'); return Array.isArray(v)?v:[]; } catch(e){ return []; } };
+    let plannedShifts = loadArray('plannedShifts');
+    let savedDocuments = loadArray('savedDocuments');
+    let monthlyGoal = Number(localStorage.getItem('monthlyGoal')||0);
+    function money(n){ return '€ '+Number(n||0).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+    function selectedMonth(){ return document.getElementById('filterMonthHome').value || new Date().toISOString().slice(0,7); }
+    function switchTab(tab){
+        ['home','calendar','stats','settings'].forEach(t=>{
+            const v=document.getElementById('view-'+t), b=document.getElementById('nav-btn-'+t);
+            if(v) v.classList.toggle('hidden',t!==tab);
+            if(b) b.className='flex flex-col items-center '+(t===tab?'text-indigo-600':'text-slate-400');
+        });
+        if(tab==='stats'){ renderStats(); renderPayslips(); }
+        if(tab==='settings'){ renderPlanned(); renderDocuments(); }
+        if(tab==='calendar') renderApp();
+        window.scrollTo({top:0,behavior:'smooth'});
+    }
+    function renderStats(){
+        const month=selectedMonth(), current=shifts.filter(x=>x.date && x.date.startsWith(month));
+        const total=current.reduce((a,x)=>a+Number(x.hours||0)*getRate(x.type),0);
+        const goal=monthlyGoal, pct=goal>0?Math.min(100,total/goal*100):0;
+        document.getElementById('goalLabel').textContent=money(goal);
+        document.getElementById('goalProgress').style.width=pct+'%';
+        document.getElementById('goalText').textContent=goal>0?`${money(total)} su ${money(goal)} (${Math.round(pct)}%)`:'Imposta un obiettivo per monitorare i progressi.';
+        document.getElementById('monthlyGoal').value=goal||'';
+        const yearSel=document.getElementById('statsYear'), year=new Date().getFullYear();
+        if(!yearSel.options.length){ for(let y=year-3;y<=year+1;y++){let o=document.createElement('option');o.value=y;o.textContent=y;if(y===year)o.selected=true;yearSel.appendChild(o);} }
+        const y=Number(yearSel.value||year), ys=shifts.filter(x=>x.date&&x.date.startsWith(String(y)));
+        const yHours=ys.reduce((a,x)=>a+Number(x.hours||0),0), yMoney=ys.reduce((a,x)=>a+Number(x.hours||0)*getRate(x.type),0);
+        document.getElementById('yearHours').textContent=yHours.toLocaleString('it-IT')+' h';
+        document.getElementById('yearEarnings').textContent=money(yMoney);
+        const months=Array.from({length:12},(_,i)=>{const key=`${y}-${String(i+1).padStart(2,'0')}`;return {name:new Date(y,i,1).toLocaleDateString('it-IT',{month:'short'}),value:ys.filter(x=>x.date.startsWith(key)).reduce((a,x)=>a+Number(x.hours||0)*getRate(x.type),0)};});
+        const max=Math.max(1,...months.map(m=>m.value));
+        document.getElementById('yearChart').innerHTML=months.map(m=>`<div class="flex items-center gap-2 text-xs"><span class="w-8 text-slate-500">${m.name}</span><div class="flex-1 h-3 bg-slate-100 rounded overflow-hidden"><div class="h-full bg-indigo-500 rounded" style="width:${m.value/max*100}%"></div></div><span class="w-20 text-right font-medium">${money(m.value)}</span></div>`).join('');
+        const types=['Giorno','Notte','Pioggia'];
+        document.getElementById('typeStats').innerHTML=types.map(t=>{const a=ys.filter(x=>x.type===t),h=a.reduce((z,x)=>z+Number(x.hours||0),0);return `<div class="flex justify-between"><span>${t}: ${a.length} turni</span><b>${h} h · ${money(h*getRate(t))}</b></div>`}).join('');
+    }
+    function saveGoal(){ monthlyGoal=Math.max(0,Number(document.getElementById('monthlyGoal').value)||0);localStorage.setItem('monthlyGoal',monthlyGoal);renderStats(); }
+    function printMonthlyReport(){
+        const m=selectedMonth(), rows=shifts.filter(x=>x.date&&x.date.startsWith(m)).sort((a,b)=>a.date.localeCompare(b.date));
+        const hours=rows.reduce((a,x)=>a+Number(x.hours||0),0);
+        const w=window.open('','_blank'); if(!w){alert('Consenti i popup per generare il report.');return;}
+        const body=rows.map(x=>`<tr><td>${escapeHTML(x.date)}</td><td>${escapeHTML(x.type)}</td><td>${Number(x.hours)}</td><td>${escapeHTML(x.cantiere||'')}</td><td>${escapeHTML(x.notes||'')}</td></tr>`).join('');
+        w.document.write(`<!doctype html><html lang="it"><meta charset="utf-8"><title>Report Turni ${m}</title><style>body{font:14px Arial;padding:24px;color:#222}h1{font-size:22px}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border:1px solid #ccc;padding:7px;text-align:left}th{background:#eee}.sum{margin-top:18px;font-weight:bold}</style><h1>TurniApp Pro - Report ${m}</h1><p>Riepilogo dei turni registrati</p><table><thead><tr><th>Data</th><th>Tipo</th><th>Ore</th><th>Cantiere</th><th>Note</th></tr></thead><tbody>${body}</tbody></table><p class="sum">Turni: ${rows.length} · Ore totali: ${hours}</p><script>window.onload=()=>window.print()<\/script></html>`);w.document.close();
+    }
+    function savePlannedShift(){
+        const date=document.getElementById('planDate').value,type=document.getElementById('planType').value,note=document.getElementById('planNote').value.trim();
+        if(!date){alert('Seleziona una data.');return;}
+        plannedShifts.push({id:Date.now(),date,type,note});localStorage.setItem('plannedShifts',JSON.stringify(plannedShifts));document.getElementById('planNote').value='';renderPlanned();
+    }
+    function deletePlanned(id){plannedShifts=plannedShifts.filter(x=>x.id!==id);localStorage.setItem('plannedShifts',JSON.stringify(plannedShifts));renderPlanned();}
+    function promotePlanned(id){const p=plannedShifts.find(x=>x.id===id);if(!p)return;document.getElementById('shiftDate').value=p.date;document.getElementById('shiftType').value=p.type;document.getElementById('shiftCantiere').value=p.note||'';switchTab('calendar');}
+    function renderPlanned(){
+        const el=document.getElementById('plannedList');if(!el)return;
+        el.innerHTML=plannedShifts.sort((a,b)=>a.date.localeCompare(b.date)).map(p=>`<div class="flex items-center justify-between border rounded-lg p-2"><span><b>${escapeHTML(p.date)}</b> · ${escapeHTML(p.type)} ${escapeHTML(p.note||'')}</span><span class="flex gap-2"><button onclick="promotePlanned(${p.id})" class="text-indigo-600">Usa</button><button onclick="deletePlanned(${p.id})" class="text-red-600">✕</button></span></div>`).join('')||'<p class="text-slate-400">Nessun turno pianificato.</p>';
+    }
+    async function requestNotifications(){
+        if(!('Notification' in window)){alert('Notifiche non supportate da questo browser.');return;}
+        const permission=await Notification.requestPermission();alert(permission==='granted'?'Notifiche abilitate. Usa “Verifica promemoria” per controllare i turni imminenti.':'Permesso notifiche non concesso.');
+    }
+    function notifyUpcoming(){
+        if(!('Notification' in window)||Notification.permission!=='granted'){alert('Prima attiva le notifiche.');return;}
+        const today=new Date();today.setHours(0,0,0,0);const tomorrow=new Date(today);tomorrow.setDate(today.getDate()+1);
+        const upcoming=plannedShifts.filter(p=>{const d=new Date(p.date+'T00:00:00');return d.getTime()===tomorrow.getTime();});
+        if(!upcoming.length){alert('Nessun turno pianificato per domani.');return;}
+        upcoming.forEach(p=>new Notification('TurniApp Pro · Turno domani',{body:`${p.type}${p.note?' · '+p.note:''}`})); 
+    }
+    function saveDocument(){
+        const f=document.getElementById('docInput').files[0];if(!f)return alert('Scegli prima un file.');
+        if(f.size>1500000)return alert('File troppo grande: massimo 1,5 MB per documento.');
+        const reader=new FileReader();reader.onload=()=>{savedDocuments.push({id:Date.now(),name:f.name,type:f.type,data:reader.result,date:new Date().toLocaleDateString('it-IT')});try{localStorage.setItem('savedDocuments',JSON.stringify(savedDocuments));renderDocuments();document.getElementById('docInput').value='';}catch(e){alert('Memoria del browser piena. Esporta o rimuovi alcuni documenti.');}};reader.readAsDataURL(f);
+    }
+    function renderDocuments(){
+        const el=document.getElementById('documentList');if(!el)return;
+        el.innerHTML=savedDocuments.map(d=>`<div class="flex items-center justify-between border rounded-lg p-2 gap-2"><a class="text-indigo-700 underline min-w-0 truncate" href="${d.data}" target="_blank" rel="noopener">${escapeHTML(d.name)}</a><button onclick="deleteDocument(${d.id})" class="text-red-600">Elimina</button></div>`).join('')||'<p class="text-slate-400">Nessun documento salvato.</p>';
+    }
+    function deleteDocument(id){if(!confirm('Eliminare questo documento?'))return;savedDocuments=savedDocuments.filter(d=>d.id!==id);localStorage.setItem('savedDocuments',JSON.stringify(savedDocuments));renderDocuments();}
+    let savedPayslips = loadArray('savedPayslips');
+    function parseItalianNumber(v){ if(v==null)return null; const n=Number(String(v).replace(/\./g,'').replace(',','.').replace(/[^0-9.-]/g,'')); return Number.isFinite(n)?n:null; }
+    function firstAmountAfter(text, labels){
+        for(const label of labels){
+            const re=new RegExp(label+'[\\s\\S]{0,100}?([0-9]{1,3}(?:\\.[0-9]{3})*,[0-9]{2}|[0-9]+,[0-9]{2})','i');
+            const m=text.match(re); if(m) return parseItalianNumber(m[1]);
+        } return null;
+    }
+    function firstNumberAfter(text, label){ const re=new RegExp(label+'[\\s\\S]{0,500}?([0-9]{1,4}(?:,[0-9]{1,2})?)','i');const m=text.match(re);return m?parseItalianNumber(m[1]):null; }
+    function firstDecimalOnMatchingLine(text, pattern){const line=text.split(/\n/).find(x=>pattern.test(x));if(!line)return null;const m=line.match(/([0-9]{1,4},[0-9]{2})/);return m?parseItalianNumber(m[1]):null;}
+    function moneyFromLine(text, pattern){const line=text.split(/\n/).find(x=>pattern.test(x));if(!line)return null;const a=[...line.matchAll(/([0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2}|[0-9]+,[0-9]{2})/g)].map(m=>parseItalianNumber(m[1]));return a.length?a[a.length-1]:null;}
+    function rowAmounts(lines, pattern, offset=1){
+        const indices=lines.map((x,i)=>pattern.test(x)?i:-1).filter(i=>i>=0); if(!indices.length)return [];
+        for(const idx of indices){ for(let j=idx;j<=Math.min(lines.length-1,idx+offset);j++){
+            const a=[...lines[j].matchAll(/([0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2}|[0-9]+,[0-9]{2})/g)].map(m=>parseItalianNumber(m[1]));
+            if(a.length)return a;
+        }} return [];
+    }
+    function extractPayslipFields(text){
+        const t=text.replace(/\u00a0/g,' ').replace(/\r/g,'\n');
+        const lines=t.split(/\n/).map(x=>x.trim()).filter(Boolean);
+        const totals=rowAmounts(lines,/TOTALE COMPETENZE/i,2);
+        const taxRow=rowAmounts(lines,/^MESE\b/i,1);
+        const contribRow=rowAmounts(lines,/TRATTENUTE\s+[0-9]/i,1);
+        const gross=totals.length?totals[0]:firstAmountAfter(t,['TOTALE COMPETENZE']);
+        const deduct=totals.length>1?totals[1]:firstAmountAfter(t,['TOTALE TRATTENUTE']);
+        const net=totals.length?totals[totals.length-1]:firstAmountAfter(t,['NETTO A PAGARE']);
+        const taxable=taxRow.length?taxRow[0]:firstAmountAfter(t,['IMPONIBILE LORDO']);
+        const irpef=taxRow.length?taxRow[taxRow.length-1]:firstAmountAfter(t,['IMPOSTA NETTA']);
+        const contrib=contribRow.length?contribRow[contribRow.length-1]:firstAmountAfter(t,['TOT\\.? CONTRIBUTI','TOTALE CONTRIBUTI']);
+        const ordinary=firstNumberAfter(t,'ORE/GIORNI ORDINARI') ?? firstNumberAfter(t,'ORE LAVORATE') ?? firstNumberAfter(t,'ORE LAV\\.');
+        const night=firstDecimalOnMatchingLine(t,/MAGG\.?\s*LAV\.?\s*NOTT|MAGG\.?NOTT/i) ?? firstNumberAfter(t,'MAGG\\.?NOTT');
+        const premiumLines=t.split(/\n/).filter(x=>/^\s*C\s+\d+\s+\d{4}/i.test(x) && /MAGG\.|MAGGIORAZ|IND\.CANT|LAV\.DOMEN/i.test(x));
+        const premiums=premiumLines.map(x=>{const a=[...x.matchAll(/([0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2}|[0-9]+,[0-9]{2})/g)].map(m=>parseItalianNumber(m[1]));return a.length?a[a.length-1]:0;}).reduce((a,b)=>a+b,0);
+        const monthMatch=t.match(/PERIODO RETRIBUZIONE\s*([A-ZÀ-Ù]+)\s*(20\d{2})/i)||t.match(/MESE DI:\s*([A-ZÀ-Ù]+)\s*(20\d{2})/i);
+        const months={GENNAIO:'01',FEBBRAIO:'02',MARZO:'03',APRILE:'04',MAGGIO:'05',GIUGNO:'06',LUGLIO:'07',AGOSTO:'08',SETTEMBRE:'09',OTTOBRE:'10',NOVEMBRE:'11',DICEMBRE:'12'};
+        const month=monthMatch?(monthMatch[2]+'-'+(months[monthMatch[1].toUpperCase()]||'01')):new Date().toISOString().slice(0,7);
+        return {month,gross,deduct,net,taxable,irpef,contrib,ordinary,night,premiums,notes:premiumLines.join('\n')};
+    }
+    async function readPayslip(file){
+        if(!file)return;const status=document.getElementById('payslipStatus');const review=document.getElementById('payslipReview');review.classList.add('hidden');status.textContent='Lettura del documento in corso…';
+        try{
+            let text='';
+            if(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')){
+                if(!window.pdfjsLib)throw new Error('Lettore PDF non caricato. Controlla la connessione e riprova.');
+                pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                const data=await file.arrayBuffer(),pdf=await pdfjsLib.getDocument({data}).promise;
+                for(let i=1;i<=pdf.numPages;i++){
+                    const page=await pdf.getPage(i),content=await page.getTextContent();
+                    const grouped={};
+                    content.items.forEach(item=>{const y=Math.round(item.transform?.[5]||0);(grouped[y]||(grouped[y]=[])).push(item);});
+                    let pageText=Object.keys(grouped).sort((a,b)=>Number(b)-Number(a)).map(y=>grouped[y].sort((a,b)=>(a.transform?.[4]||0)-(b.transform?.[4]||0)).map(x=>x.str).join(' ')).join('\n');
+                    if(pageText.replace(/\s/g,'').length<35){
+                        if(!window.Tesseract)throw new Error('OCR non disponibile per questo PDF scannerizzato.');
+                        const vp=page.getViewport({scale:1.7}),canvas=document.createElement('canvas');canvas.width=vp.width;canvas.height=vp.height;await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+                        const result=await Tesseract.recognize(canvas,'ita+eng');pageText=result.data.text;
+                    }
+                    text+='\n'+pageText;
+                    status.textContent=`Lettura pagina ${i} di ${pdf.numPages}…`;
+                }
+            }else if(file.type.startsWith('image/')){
+                if(!window.Tesseract)throw new Error('Motore OCR non caricato. Controlla la connessione e riprova.');
+                const result=await Tesseract.recognize(file,'ita+eng',{logger:m=>{if(m.status==='recognizing text')status.textContent='Riconoscimento testo '+Math.round((m.progress||0)*100)+'%…';}});text=result.data.text;
+            }else throw new Error('Formato non supportato. Carica PDF, JPG o PNG.');
+            const d=extractPayslipFields(text);document.getElementById('psMonth').value=d.month;
+            const map={psNet:d.net,psGross:d.gross,psDeduct:d.deduct,psTaxable:d.taxable,psIrpef:d.irpef,psContrib:d.contrib,psOrdinary:d.ordinary,psNight:d.night,psPremium:d.premiums};
+            Object.entries(map).forEach(([id,v])=>document.getElementById(id).value=v==null?'':Number(v.toFixed(2)));
+            document.getElementById('psNotes').value=d.notes||'Nessuna voce di maggiorazione riconosciuta automaticamente.';
+            review.classList.remove('hidden');status.textContent='Lettura completata: controlla e correggi i campi evidenziati prima di salvare.';
+        }catch(e){status.textContent='Non sono riuscito a leggere il documento: '+e.message;}
+    }
+    function savePayslip(){
+        const val=id=>{const x=document.getElementById(id).value;return x===''?null:Number(x);};
+        const rec={id:Date.now(),month:document.getElementById('psMonth').value||new Date().toISOString().slice(0,7),net:val('psNet'),gross:val('psGross'),deduct:val('psDeduct'),taxable:val('psTaxable'),irpef:val('psIrpef'),contrib:val('psContrib'),ordinary:val('psOrdinary'),night:val('psNight'),premiums:val('psPremium'),notes:document.getElementById('psNotes').value};
+        if(Object.values(rec).every(v=>v===null||v===''))return alert('Non ci sono dati da salvare.');
+        savedPayslips=savedPayslips.filter(x=>x.month!==rec.month);savedPayslips.push(rec);
+        try{localStorage.setItem('savedPayslips',JSON.stringify(savedPayslips));renderPayslips();document.getElementById('payslipStatus').textContent='Busta paga salvata. Puoi correggere o sostituire il mese caricando di nuovo il cedolino.';}
+        catch(e){alert('Memoria piena. Esporta il backup e libera spazio.');}
+    }
+    function renderPayslips(){const el=document.getElementById('payslipList');if(!el)return;el.innerHTML=savedPayslips.sort((a,b)=>b.month.localeCompare(a.month)).map(x=>`<div class="border rounded-lg p-2 space-y-1"><div class="flex justify-between"><b>${escapeHTML(x.month)}</b><b>${x.net==null?'Netto non letto':money(x.net)}</b></div><div class="text-slate-500">Competenze ${x.gross==null?'—':money(x.gross)} · Trattenute ${x.deduct==null?'—':money(x.deduct)} · IRPEF ${x.irpef==null?'—':money(x.irpef)}</div><button onclick="deletePayslip(${x.id})" class="text-red-600">Elimina</button></div>`).join('')||'<p class="text-slate-400">Nessuna busta paga salvata.</p>';}
+    function deletePayslip(id){if(!confirm('Eliminare questa busta paga?'))return;savedPayslips=savedPayslips.filter(x=>x.id!==id);localStorage.setItem('savedPayslips',JSON.stringify(savedPayslips));renderPayslips();}
+
+
+    // TurniApp Pro 6.2 — confronto mensile turni / cedolino.
+    function comparisonForMonth(month){
+        const monthShifts = shifts.filter(s => s.date && s.date.startsWith(month));
+        const workedHours = monthShifts.reduce((a,s) => a + Number(s.hours || 0), 0);
+        const estimated = monthShifts.reduce((a,s) => a + Number(s.hours || 0) * getRate(s.type), 0);
+        const slip = savedPayslips.find(p => p.month === month) || null;
+        const hasSlipHours = slip && (slip.ordinary != null || slip.night != null);
+        const slipHours = hasSlipHours ? Number(slip.ordinary || 0) + Number(slip.night || 0) : null;
+        return {month, monthShifts, workedHours, estimated, slip, slipHours,
+            hourDelta: slipHours == null ? null : workedHours - slipHours,
+            netDelta: slip && slip.net != null ? estimated - Number(slip.net) : null};
+    }
+    function renderPayComparison(){
+        const select = document.getElementById('comparisonMonth');
+        const summary = document.getElementById('comparisonSummary');
+        const warnings = document.getElementById('comparisonWarnings');
+        if(!select || !summary || !warnings) return;
+        const months = [...new Set([...shifts.map(s => s.date && s.date.slice(0,7)),
+            ...savedPayslips.map(p => p.month)].filter(Boolean))].sort().reverse();
+        const previous = select.value;
+        select.innerHTML = months.map(m => `<option value="${escapeHTML(m)}">${escapeHTML(m)}</option>`).join('');
+        if(months.includes(previous)) select.value = previous;
+        else if(months.includes(selectedMonth())) select.value = selectedMonth();
+        if(!select.value){
+            summary.innerHTML = '<p class="col-span-2 text-slate-500">Registra un turno o salva una busta paga per iniziare.</p>';
+            warnings.innerHTML = ''; return;
+        }
+        const d = comparisonForMonth(select.value), p = d.slip;
+        const fh = v => v == null ? 'Non disponibile' : Number(v).toLocaleString('it-IT',{maximumFractionDigits:2})+' h';
+        const fe = v => v == null ? 'Non disponibile' : money(v);
+        const card = (label,value) => `<div class="bg-slate-50 rounded-lg p-3"><div class="text-[11px] text-slate-500">${label}</div><b>${value}</b></div>`;
+        summary.innerHTML = card('Ore dai turni',fh(d.workedHours)) +
+            card('Ore da busta paga',fh(d.slipHours)) +
+            card('Guadagno stimato',fe(d.estimated)) +
+            card('Netto pagato',fe(p ? p.net : null));
+        const notes = [];
+        if(!p) notes.push('🟠 Nessuna busta paga salvata per questo mese.');
+        else if(d.slipHours == null) notes.push('🟠 Ore del cedolino non disponibili: controlla e inserisci le ore ordinarie/notturne nella scheda busta paga.');
+        else if(Math.abs(d.hourDelta) > 0.01) notes.push(`🔴 Differenza ore: ${d.hourDelta > 0 ? '+' : ''}${d.hourDelta.toLocaleString('it-IT',{maximumFractionDigits:2})} h (turni meno cedolino). Verifica il periodo e le voci.`);
+        else notes.push('🟢 Le ore confrontabili coincidono.');
+        if(p && p.net != null) notes.push(`ℹ️ Differenza stima turni - netto: ${money(d.netDelta)}. Non indica da sola un errore di paga.`);
+        warnings.innerHTML = notes.map(n=>`<p>${n}</p>`).join('');
+    }
+    function printComparisonReport(){
+        const month = document.getElementById('comparisonMonth')?.value;
+        if(!month) return alert('Non ci sono mesi da confrontare.');
+        const d = comparisonForMonth(month);
+        const fmt = v => v == null ? 'Non disponibile' : Number(v).toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
+        const rows = d.monthShifts.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(s =>
+            `<tr><td>${escapeHTML(s.date)}</td><td>${escapeHTML(s.type || '')}</td><td>${fmt(Number(s.hours||0))}</td><td>${escapeHTML(s.cantiere || '—')}</td></tr>`).join('');
+        const w = window.open('', '_blank');
+        if(!w) return alert('Consenti le finestre popup per generare il report.');
+        const slipHours = d.slipHours == null ? 'Non disponibili' : fmt(d.slipHours)+' h';
+        w.document.open();
+        w.document.write(`<!doctype html><html lang="it"><head><meta charset="utf-8"><title>Report ore ${escapeHTML(month)}</title>
+        <style>body{font:14px Arial,sans-serif;margin:28px;color:#222}h1{font-size:21px}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border:1px solid #bbb;padding:7px;text-align:left}th{background:#eee}.box{padding:10px;border:1px solid #bbb;margin:8px 0}small{color:#555}@media print{button{display:none}}</style></head><body>
+        <h1>TurniApp Pro — Report ore lavorate</h1><p>Mese: <b>${escapeHTML(month)}</b></p>
+        <div class="box">Ore registrate dai turni: <b>${fmt(d.workedHours)} h</b><br>Ore da cedolino (ordinarie + notturne): <b>${slipHours}</b><br>Differenza ore: <b>${d.hourDelta==null?'Non calcolabile':fmt(d.hourDelta)+' h'}</b></div>
+        <h2>Turni registrati</h2><table><thead><tr><th>Data</th><th>Tipo turno</th><th>Ore</th><th>Cantiere / Luogo</th></tr></thead><tbody>${rows||'<tr><td colspan="4">Nessun turno registrato</td></tr>'}</tbody></table>
+        <p><small>Report riepilogativo delle ore. Verificare che il periodo e le voci orarie del cedolino siano confrontabili con i turni registrati.</small></p>
+        <button onclick="window.print()">Stampa / Salva come PDF</button><script>window.onload=()=>window.print()<\/script></body></html>`);
+        w.document.close();
+    }
+    const renderStats62 = renderStats;
+    renderStats = function(){ renderStats62(); renderPayComparison(); };
+
+    // Migrazione e salvataggio automatico locale: gli export rimangono disponibili anche offline.
+    const originalSaveAndRender=saveAndRender;
+    saveAndRender=function(){originalSaveAndRender();if(!document.getElementById('view-stats').classList.contains('hidden'))renderStats();};
+    document.getElementById('planDate').value=new Date().toISOString().slice(0,10);
+    renderApp();
+    </script>
+
+    <script>
+    // Registra la cache PWA quando l'app viene pubblicata su HTTPS o localhost.
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').catch(err => console.warn('Service worker non registrato:', err));
+        });
+    }
+    </script>
+
+</body>
+</html>
